@@ -90,13 +90,13 @@ _parse_options "${@}" || usage
 
 g_SOFTWARE="${g_SOFTWARE:-/usr/bin/supervisord}"
 if command -v "${g_SOFTWARE}" >/dev/null; then
-    _trace "${g_SOFTWARE} is intalled."
-    exit 0
+    _trace "${g_SOFTWARE} is already intalled."
+    exit $RET_OK
 fi
 
 g_SOFTLIST="elementtree-1.2.6  meld3-0.6.5  setuptools-14.3.1  supervisor-3.1.3"
 for soft in ${g_SOFTLIST}; do
-    echo $soft;
+    _trace "Installing software now: $soft"
     if [ -d "$soft" ]; then
         pushd .
 	cd $soft && python setup.py install
@@ -114,7 +114,7 @@ done
 
 g_CONF_FILE="supervisord.conf"
 if [ -f "${g_CONF_FILE}" ]; then
-    _trace "cp yaml configure file to /etc/"
+    _trace "cp configure file to /etc/"
     cp -uf "${g_CONF_FILE}" /etc/
 else
     _print_fatal "Configure file ${g_CONF_FILE} is not existed."
