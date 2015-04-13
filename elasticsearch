@@ -44,6 +44,71 @@ export ES_JAVA_OPTS
 export JAVA_HOME
 
 lockfile=/var/lock/subsys/$prog
+DAEMON=0
+ACTION=""
+RET_OK=0
+RET_FAILED=1
+
+usage() {
+    cat << USAGE
+Usage: bash ${MYNAME} [-h] [-d]
+                 action {start|stop|status|restart|condrestart|try-restart|reload|force-reload}
+
+Optional arguments:
+    -d, --daemon          Enable daemon model.
+    -h, --help            Print this help infomation.
+
+Require:
+    action  {start|stop|status|restart|condrestart|try-restart|reload|force-reload}
+
+USAGE
+
+    exit $RET_FAILED
+}
+
+#
+# Parses command-line options.
+#  usage: _parse_options "$@" || exit $?
+#
+function _parse_options()
+{
+    declare -a argv
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -d|--daemon)
+            	DAEMON=1
+            	;;
+            -h|--help)
+            	usage
+            	exit
+            	;;
+            --)
+            	shift
+                argv=("${argv[@]}" "${@}")
+            	break
+            	;;
+            -*)
+            	_print_fatal "command line: unrecognized option $1" >&2
+            	return 1
+            	;;
+            *)
+                argv=("${argv[@]}" "${1}")
+                shift
+                ;;
+        esac
+    done
+    
+    case ${#argv[@]} in
+        1)
+            ACTION="${argv[0]}"
+            ;;
+        0|*)
+            usage 1>&2
+            return 1
+        ;;
+    esac
+}
 
 # backwards compatibility for old config sysconfig files, pre 0.90.1
 if [ -n $USER ] && [ -z $ES_USER ] ; then 
@@ -86,8 +151,11 @@ start() {
     fi
     echo -n $"Starting $prog: "
     # if not running, start it up here, usually something like "daemon $exec"
-    #daemon --user $ES_USER --pidfile $pidfile $exec -p $pidfile -d -Des.default.path.home=$ES_HOME -Des.default.path.logs=$LOG_DIR -Des.default.path.data=$DATA_DIR -Des.default.path.work=$WORK_DIR -Des.default.path.conf=$CONF_DIR
-    $exec -p $pidfile -Des.default.path.home=$ES_HOME -Des.default.path.logs=$LOG_DIR -Des.default.path.data=$DATA_DIR -Des.default.path.work=$WORK_DIR -Des.default.path.conf=$CONF_DIR
+    if [ "x${DAEMON}" == "x1" ]; then
+        daemon --user $ES_USER --pidfile $pidfile $exec -p $pidfile -d -Des.default.path.home=$ES_HOME -Des.default.path.logs=$LOG_DIR -Des.default.path.data=$DATA_DIR -Des.default.path.work=$WORK_DIR -Des.default.path.conf=$CONF_DIR
+    else
+        $exec -p $pidfile -Des.default.path.home=$ES_HOME -Des.default.path.logs=$LOG_DIR -Des.default.path.data=$DATA_DIR -Des.default.path.work=$WORK_DIR -Des.default.path.conf=$CONF_DIR
+    fi
     retval=$?
     echo
     [ $retval -eq 0 ] && touch $lockfile
@@ -126,22 +194,23 @@ rh_status_q() {
     rh_status >/dev/null 2>&1
 }
 
+_parse_options "${@}" || usage
 
-case "$1" in
+case "$ACTION" in
     start)
         rh_status_q && exit 0
-        $1
+        ${ACTION}
         ;;
     stop)
         rh_status_q || exit 0
-        $1
+        ${ACTION}
         ;;
     restart)
-        $1
+        ${ACTION}
         ;;
     reload)
         rh_status_q || exit 7
-        $1
+        ${ACTION}
         ;;
     force-reload)
         force_reload
