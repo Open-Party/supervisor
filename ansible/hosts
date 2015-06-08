@@ -1,0 +1,4 @@
+[supervisord]
+10.103.12.18   ansible_ssh_port=22
+10.103.12.19   ansible_ssh_port=22
+10.103.12.20   ansible_ssh_port=22

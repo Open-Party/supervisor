@@ -1,0 +1,25 @@
+---
+- hosts: all
+  vars:
+    # this is the repository that holds our sample webapp
+    repository: https://github.com/Open-Party/supervisor.git
+    # this is the sha1sum of V5 of the test webapp.
+    sup_version: a44b5a5ce5ffda4d1590014e8ab6c15df4ad139e
+
+  remote_user: root
+  tasks:
+    # elasticsearch is handled by the base-apache role upstream
+    - name: Install git
+      yum: name={{ item }} state=present
+      with_items:
+       - git
+
+    - name: Copy the code from repository
+      git: repo={{ repository }} version={{ sup_version }} dest=/opt/opdir/supervisord
+
+    - name: install supervisord
+      command: /bin/sh /opt/opdir/supervisord/supervisor-install.sh
+
+  handlers:
+    - name: restart supervisord
+      service: name=supervisord state=started
